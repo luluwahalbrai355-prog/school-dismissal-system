@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقارير الإدارية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body>
+    <header class="main-header">
+        <h1>التقارير الإدارية</h1>
+    </header>
+
+    <main class="dashboard">
+        <h2>إنشاء تقرير</h2>
+        <select id="reportType">
+            <option value="weekly">أسبوعي</option>
+            <option value="monthly">شهري</option>
+        </select>
+        <button class="main-btn" onclick="exportReport()">📤 تصدير PDF</button>
+
+        <div id="reportData" style="margin-top:20px;">
+            <table border="1" width="100%" cellpadding="10">
+                <thead style="background-color:#3A5DAE; color:#fff;">
+                    <tr>
+                        <th>اسم الطالبة</th>
+                        <th>الصف</th>
+                        <th>اسم ولي الأمر</th>
+                        <th>وقت الانصراف</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody id="reportBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>© 2026 مدرسة أم معبد الخزاعية للبنات</p>
+    </footer>
+
+    <script src="../assets/js/admin.js"></script>
+</body>
+<script type="module" src="../assets/js/admin.js"></script>
+
+</html>

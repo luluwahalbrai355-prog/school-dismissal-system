@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة بيانات الطالبات - نظام انصراف الطالبات الذكي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body>
+    <header class="main-header">
+        <h1>إدارة بيانات الطالبات</h1>
+    </header>
+
+    <main class="dashboard">
+        <section class="add-student">
+            <h2>إضافة / تعديل بيانات</h2>
+            <form id="studentForm" onsubmit="addOrUpdateStudent(event)">
+                <input type="hidden" id="editIndex">
+                <label>اسم الطالبة:</label>
+                <input type="text" id="studentName" required>
+                <label>الصف:</label>
+                <input type="text" id="studentGrade" required>
+                <label>الرقم المدرسي:</label>
+                <input type="text" id="studentID" required>
+                <label>الرقم المدني لولي الامر 1:</label>
+                <input type="text" id="guardian1" required>
+                <label>رقم وليّ الأمر 1:</label>
+                <input type="text" id="phone1" required>
+                <label>وليّ الأمر 2 (اختياري):</label>
+                <input type="text" id="guardian2">
+                <label>رقم وليّ الأمر 2:</label>
+                <input type="text" id="phone2">
+                <button type="submit" class="main-btn">💾 حفظ البيانات</button>
+            </form>
+        </section>
+
+        <section class="table-section">
+            <h2>قائمة الطالبات</h2>
+            <table border="1" width="100%" cellpadding="10">
+                <thead style="background-color:#3A5DAE; color:#fff;">
+                    <tr>
+                        <th>الاسم</th>
+                        <th>الصف</th>
+                        <th>الرقم المدرسي</th>
+                        <th>وليّ الأمر</th>
+                        <th>رقم الهاتف</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsTable"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>© 2026 مدرسة أم معبد الخزاعية للبنات</p>
+    </footer>
+
+    <script src="../assets/js/admin.js"></script>
+</body>
+<script type="module" src="../assets/js/admin.js"></script>
+
+</html>

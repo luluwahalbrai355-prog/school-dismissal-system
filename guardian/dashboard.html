@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>لوحة وليّ الأمر - نظام انصراف الطالبات الذكي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../assets/css/style.css" />
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #f7f9fc;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dashboard {
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h3 {
+            color: #3A5DAE;
+            margin-bottom: 8px;
+        }
+
+        p {
+            margin: 4px 0;
+            font-size: 16px;
+        }
+
+        .main-btn {
+            display: block;
+            width: 100%;
+            margin-top: 12px;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #3A5DAE;
+            color: white;
+            font-size: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .main-btn:disabled {
+            opacity: 0.9;
+            cursor: not-allowed;
+        }
+
+        footer {
+            text-align: center;
+            padding: 12px;
+            font-size: 14px;
+            color: #555;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="main-header">
+        <h1>لوحة وليّ الأمر</h1>
+    </header>
+
+    <main class="dashboard">
+        <h3>بيانات الطالبة</h3>
+        <p>الاسم: <span id="studentName">—</span></p>
+        <p>الصف: <span id="studentGrade">—</span></p>
+
+        <h3>خيارات الانصراف</h3>
+        <button id="requestBtn" class="main-btn">🔔 طلب استلام الطالبة</button>
+
+        <div id="extraActions" style="display:none;">
+            <button class="main-btn" style="background-color:#f5b700;" onclick="sendGPS()">📍 أنا قريب من
+                المدرسة</button>
+            <button class="main-btn" style="background-color:#c0392b;" onclick="cancelRequest()">❌ إلغاء الطلب</button>
+            <button class="main-btn" style="background-color:#27ae60;" onclick="confirmPickup()">✅ لقد استلمت
+                الطالبة</button>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2026 مدرسة أم معبد الخزاعية للبنات</p>
+    </footer>
+
+    <script type="module">
+        import { db } from "../database/config.js";
+        import {
+            setDoc,
+            doc,
+            updateDoc,
+            deleteDoc,
+            onSnapshot,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+        // 🎵 نغمة إشعار وصول الرد (قبول أو رفض)
+        const notificationTone = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const studentName = localStorage.getItem("guardianStudentName") || "—";
+            const studentGrade = localStorage.getItem("guardianGrade") || "—";
+
+            const nameSpan = document.getElementById("studentName");
+            const gradeSpan = document.getElementById("studentGrade");
+            const requestBtn = document.getElementById("requestBtn");
+            const extraActions = document.getElementById("extraActions");
+
+            nameSpan.textContent = studentName;
+            gradeSpan.textContent = studentGrade;
+
+            const docRef = doc(db, "notifications", studentName);
+
+            // تفعيل الصوت وإذن الإشعارات عند أول لمسة/نقرة
+            let audioAllowed = false;
+            const allowAudio = () => {
+                if (!audioAllowed) {
+                    notificationTone.play().then(() => {
+                        notificationTone.pause();
+                        notificationTone.currentTime = 0;
+                        audioAllowed = true;
+                    }).catch(() => { });
+                }
+                if ("Notification" in window && Notification.permission !== "granted") {
+                    Notification.requestPermission();
+                }
+            };
+            document.addEventListener("click", allowAudio, { once: true });
+            document.addEventListener("touchstart", allowAudio, { once: true });
+
+            // ✅ إرسال طلب استلام الطالبة
+            requestBtn.addEventListener("click", async () => {
+                allowAudio();
+
+                try {
+                    await setDoc(docRef, {
+                        studentName,
+                        grade: studentGrade,
+                        status: "قيد الانتظار ⏳",
+                        createdAt: serverTimestamp(),
+                        lastEvent: "request"
+                    });
+
+                    alert("✅ تم إرسال الطلب بنجاح، بانتظار موافقة المشرفة.");
+                } catch (err) {
+                    console.error("خطأ أثناء إرسال الطلب:", err);
+                    alert("❌ حدث خطأ أثناء إرسال الطلب.");
+                }
+            });
+
+            // 📍 إرسال الموقع الجغرافي الحقيقي بدقة GPS عالية
+            window.sendGPS = async () => {
+                if (!navigator.geolocation) {
+                    alert("⚠️ المتصفح لا يدعم تحديد الموقع");
+                    return;
+                }
+
+                alert("⏳ يتم تحديد موقعك الآن...");
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        await updateDoc(docRef, {
+                            status: "وليّ الأمر قريب من المدرسة 📍",
+                            location: {
+                                lat: pos.coords.latitude,
+                                lng: pos.coords.longitude
+                            },
+                            updatedAt: serverTimestamp(),
+                            lastEvent: "nearby"
+                        });
+                        alert("📍 تم إرسال موقعك بنجاح");
+                    },
+                    (err) => {
+                        console.error("خطأ في تحديد الموقع:", err);
+                        alert("⚠️ لم يتم تحديد الموقع، يرجى تفعيل الـ GPS.");
+                    },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                );
+            };
+
+            // ❌ إلغاء الطلب وإعادة الواجهة فوراً لحالتها الأصلية
+            window.cancelRequest = async () => {
+                const confirmCancel = confirm("هل أنت متأكد من إلغاء طلب الاستلام؟");
+                if (!confirmCancel) return;
+
+                try {
+                    // حذف الطلب مباشرة من قاعدة البيانات
+                    await deleteDoc(docRef);
+
+                    // إعادة الواجهة للوضع الطبيعي يدوياً وفوراً
+                    resetToDefault();
+                    alert("❌ تم إلغاء الطلب بنجاح");
+                } catch (err) {
+                    console.error("خطأ أثناء الإلغاء:", err);
+                    alert("⚠️ حدث خطأ أثناء محاولة إلغاء الطلب");
+                }
+            };
+
+            // ✅ تأكيد استلام الطالبة من ولي الأمر
+            window.confirmPickup = async () => {
+                try {
+                    await updateDoc(docRef, {
+                        status: "تم استلام الطالبة ✅",
+                        receivedAt: serverTimestamp(),
+                        lastEvent: "received"
+                    });
+
+                    alert("✅ تم تأكيد استلام الطالبة بنجاح، شكراً لكم!");
+
+                    // بعد ثانيتين ونصف يتم تنظيف الطلب وإعادة الواجهة
+                    setTimeout(async () => {
+                        await deleteDoc(docRef).catch(() => { });
+                        resetToDefault();
+                    }, 2500);
+                } catch (err) {
+                    console.error("خطأ أثناء التأكيد:", err);
+                }
+            };
+
+            // 👁️ مراقبة التغييرات المباشرة في Firestore
+            let lastStatus = "";
+            onSnapshot(docRef, (docSnap) => {
+                // إذا تم حذف المستند (عند الإلغاء أو انتهاء الاستلام) يرجع كل شيء للصفر
+                if (!docSnap.exists()) {
+                    resetToDefault();
+                    return;
+                }
+
+                const data = docSnap.data();
+
+                // في حال وجود طلب نشط
+                requestBtn.textContent = `📢 الحالة: ${data.status}`;
+                requestBtn.disabled = true;
+
+                // 1. في حال تأكيد المشرفة للانصراف (القبول)
+                if (data.status.includes("تأكيد") || data.status.includes("✅")) {
+                    requestBtn.style.backgroundColor = "#27ae60";
+                    if (lastStatus !== data.status) {
+                        notificationTone.play().catch(() => { });
+                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                        alert(`🎉 تمت الموافقة وتأكيد انصراف الطالبة: ${studentName}`);
+                    }
+                }
+                // 2. في حال رفض المشرفة للطلب
+                else if (data.status.includes("رفض") || data.status.includes("❌")) {
+                    requestBtn.style.backgroundColor = "#c0392b";
+                    if (lastStatus !== data.status) {
+                        notificationTone.play().catch(() => { });
+                        if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+                        alert(`⚠️ تنبيه من المشرفة: ${data.status}`);
+                    }
+                }
+                // 3. في حال اقتراب ولي الأمر
+                else if (data.status.includes("قريب")) {
+                    requestBtn.style.backgroundColor = "#f39c12";
+                }
+                // 4. قيد الانتظار الافتراضي
+                else {
+                    requestBtn.style.backgroundColor = "#f1c40f";
+                }
+
+                lastStatus = data.status;
+                extraActions.style.display = "block";
+            });
+
+            // 🧹 الدالة المسؤولة عن تصفير الصفحة وإرجاع زر الطلب الأصلي
+            function resetToDefault() {
+                lastStatus = "";
+                requestBtn.disabled = false;
+                requestBtn.textContent = "🔔 طلب استلام الطالبة";
+                requestBtn.style.backgroundColor = "#3A5DAE";
+                extraActions.style.display = "none";
+            }
+        });
+    </script>
+</body>
+
+</html>

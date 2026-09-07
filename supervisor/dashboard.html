@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>لوحة المشرفة - نظام انصراف الطالبات الذكي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../assets/css/style.css" />
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #f4f7f6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dashboard {
+            max-width: 1100px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            color: #3A5DAE;
+            margin: 0;
+            font-size: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        th {
+            background: #3A5DAE;
+            color: white;
+            padding: 12px;
+            font-size: 15px;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background-color: #f9fbfd;
+        }
+
+        .btn-action {
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            margin: 2px;
+        }
+
+        .btn-export {
+            background-color: #107c41;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-export:hover {
+            background-color: #0b5a2f;
+        }
+
+        .notification-banner {
+            display: none;
+            background-color: #27ae60;
+            color: white;
+            text-align: center;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from {
+                transform: scale(1);
+            }
+
+            to {
+                transform: scale(1.02);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="main-header" style="background:#3A5DAE; color:white; padding:15px; text-align:center;">
+        <h1 style="margin:0;">لوحة المشرفة - متابعة الانصراف</h1>
+    </header>
+
+    <main class="dashboard">
+        <!-- شريط التنبيه المرئي -->
+        <div id="visualAlert" class="notification-banner">🔔 وصل طلب انصراف جديد الآن!</div>
+
+        <!-- 1. جدول الطلبات الحالية النشطة -->
+        <div class="card">
+            <div class="section-header">
+                <h3 class="section-title">⏳ طلبات الانصراف الحالية النشطة</h3>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم الطالبة</th>
+                        <th>الصف</th>
+                        <th>الحالة</th>
+                        <th>المسافة</th>
+                        <th>وقت الطلب</th>
+                        <th>إجراءات المشرفة</th>
+                    </tr>
+                </thead>
+                <tbody id="requestsBody"></tbody>
+            </table>
+        </div>
+
+        <!-- 2. جدول سجل الطالبات المنصرفات + زر تصدير Excel -->
+        <div class="card">
+            <div class="section-header">
+                <h3 class="section-title">📋 سجل الطالبات اللاتي تم انصرافهن (الأرشيف)</h3>
+                <button class="btn-export" onclick="exportToExcel()">📥 تصدير السجل إلى Excel</button>
+            </div>
+            <table>
+                <thead style="background:#2c3e50;">
+                    <tr>
+                        <th>اسم الطالبة</th>
+                        <th>الصف</th>
+                        <th>تاريخ اليوم</th>
+                        <th>وقت الانصراف</th>
+                        <th>الحالة النهائية</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer style="text-align:center; padding:15px; color:#777;">
+        <p>© 2026 مدرسة أم معبد الخزاعية للبنات</p>
+    </footer>
+
+    <script type="module">
+        import { db } from "../database/config.js";
+        import {
+            collection,
+            onSnapshot,
+            updateDoc,
+            doc,
+            addDoc,
+            deleteDoc,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+        const tableBody = document.getElementById("requestsBody");
+        const historyBody = document.getElementById("historyBody");
+        const visualAlert = document.getElementById("visualAlert");
+
+        const alertSound = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+
+        // تفعيل الصوت وإشعارات المتصفح
+        let audioUnlocked = false;
+        const unlockAudio = () => {
+            if (!audioUnlocked) {
+                alertSound.play().then(() => {
+                    alertSound.pause();
+                    alertSound.currentTime = 0;
+                    audioUnlocked = true;
+                }).catch(() => { });
+            }
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+        };
+        document.addEventListener("click", unlockAudio, { once: true });
+        document.addEventListener("touchstart", unlockAudio, { once: true });
+
+        const schoolLat = 23.812877;
+        const schoolLng = 57.470252;
+        let isFirstLoad = true;
+        let completedArchive = []; // لتخزين البيانات لملف الإكسل
+
+        // 🟢 1. مراقبة الطلبات النشطة (notifications)
+        onSnapshot(collection(db, "notifications"), (snapshot) => {
+            tableBody.innerHTML = "";
+
+            if (!isFirstLoad) {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added" || (change.type === "modified" && change.doc.data().status.includes("قيد"))) {
+                        const newReq = change.doc.data();
+                        alertSound.play().catch(() => { });
+                        visualAlert.style.display = "block";
+                        visualAlert.textContent = `🔔 طلب استلام لطالبة: ${newReq.studentName} (${newReq.grade})`;
+                        setTimeout(() => { visualAlert.style.display = "none"; }, 5000);
+
+                        if ("Notification" in window && Notification.permission === "granted") {
+                            new Notification("🔔 طلب انصراف جديد", {
+                                body: `الطالبة: ${newReq.studentName} - الصف: ${newReq.grade}`,
+                                icon: "../assets/images/logo.jpeg"
+                            });
+                        }
+                    }
+                });
+            }
+            isFirstLoad = false;
+
+            const requests = [];
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                // فقط الطلبات التي لم تكتمل تعرض في الجدول النشط
+                if (!data.status || (!data.status.includes("تم استلام") && !data.status.includes("تم تأكيد"))) {
+                    requests.push({ id: docSnap.id, ...data });
+                }
+            });
+
+            requests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+            if (requests.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" style="color:#888; padding:15px;">لا توجد طلبات نشطة حالياً</td></tr>`;
+            }
+
+            requests.forEach((data) => {
+                const id = data.id;
+                let distanceText = "—";
+                if (data.location?.lat && data.location?.lng) {
+                    distanceText = `${distanceBetween(schoolLat, schoolLng, data.location.lat, data.location.lng).toFixed(1)} كم`;
+                }
+
+                let color = "#f39c12";
+                if (data.status?.includes("قريب")) color = "#e67e22";
+                if (data.status?.includes("رفض")) color = "#c0392b";
+
+                const timeStr = data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString("ar-EG") : "الآن";
+
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td style="font-weight:bold;">${data.studentName || "—"}</td>
+                    <td>${data.grade || "—"}</td>
+                    <td style="color:${color}; font-weight:bold;">${data.status || "—"}</td>
+                    <td>${distanceText}</td>
+                    <td>${timeStr}</td>
+                    <td>
+                        <button class="btn-action" style="background:#27ae60; color:white;" onclick="confirmAndArchive('${id}', '${data.studentName}', '${data.grade}')">تأكيد الانصراف ✅</button>
+                        <button class="btn-action" style="background:#c0392b; color:white;" onclick="rejectRequest('${id}')">رفض ❌</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        });
+
+        // 📋 2. مراقبة سجل المنصرفات الدائم للأرشيف (dismissal_history)
+        onSnapshot(collection(db, "dismissal_history"), (snapshot) => {
+            historyBody.innerHTML = "";
+            completedArchive = [];
+
+            snapshot.forEach((docSnap) => {
+                completedArchive.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            // ترتيب الأحدث أولاً
+            completedArchive.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+            if (completedArchive.length === 0) {
+                historyBody.innerHTML = `<tr><td colspan="5" style="color:#888; padding:15px;">لم يتم تسجيل أي انصراف اليوم حتى الآن</td></tr>`;
+            }
+
+            completedArchive.forEach((item) => {
+                const dateObj = item.timestamp ? new Date(item.timestamp.seconds * 1000) : new Date();
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td style="font-weight:bold; color:#2c3e50;">${item.studentName}</td>
+                    <td>${item.grade}</td>
+                    <td>${dateObj.toLocaleDateString("ar-EG")}</td>
+                    <td>${dateObj.toLocaleTimeString("ar-EG")}</td>
+                    <td style="color:#27ae60; font-weight:bold;">${item.status}</td>
+                `;
+                historyBody.appendChild(row);
+            });
+        });
+
+        // ✅ وظيفة تأكيد الانصراف ونقله لقاعدة بيانات الأرشيف
+        window.confirmAndArchive = async (id, studentName, grade) => {
+            try {
+                // 1. تحديث إشعار ولي الأمر أولاً ليراه فوراً
+                const docRef = doc(db, "notifications", id);
+                await updateDoc(docRef, { status: "تم تأكيد الانصراف ✅" });
+
+                // 2. حفظ السجل دائماً في مجموعة dismissal_history
+                await addDoc(collection(db, "dismissal_history"), {
+                    studentName: studentName,
+                    grade: grade,
+                    status: "تم تأكيد الانصراف بنجاح",
+                    timestamp: serverTimestamp(),
+                    dateString: new Date().toLocaleDateString("en-GB")
+                });
+
+                // 3. مسح الطلب من الشاشة النشطة بعد مهلة قصيرة
+                setTimeout(async () => {
+                    await deleteDoc(docRef).catch(() => { });
+                }, 4000);
+
+            } catch (err) {
+                console.error("خطأ أثناء التأكيد والأرشفة:", err);
+            }
+        };
+
+        // ❌ وظيفة رفض الطلب
+        window.rejectRequest = async (id) => {
+            const reason = prompt("يرجى كتابة سبب الرفض (اختياري):", "نعتذر، يرجى مراجعة إدارة المدرسة");
+            if (reason === null) return;
+
+            try {
+                const docRef = doc(db, "notifications", id);
+                await updateDoc(docRef, {
+                    status: `تم الرفض ❌ (${reason})`
+                });
+            } catch (err) {
+                console.error("خطأ في الرفض:", err);
+            }
+        };
+
+        // 📥 وظيفة تنزيل السجل بملف Excel (CSV يدعم العربية UTF-8)
+        window.exportToExcel = () => {
+            if (completedArchive.length === 0) {
+                alert("⚠️ لا توجد بيانات في السجل لتصديرها.");
+                return;
+            }
+
+            let csvContent = "\uFEFF"; // Byte Order Mark لقراءة الحروف العربية في الإكسل بشكل صحيح
+            csvContent += "اسم الطالبة,الصف,تاريخ الانصراف,وقت الانصراف,الحالة\n";
+
+            completedArchive.forEach(row => {
+                const dateObj = row.timestamp ? new Date(row.timestamp.seconds * 1000) : new Date();
+                const dStr = dateObj.toLocaleDateString("en-GB");
+                const tStr = dateObj.toLocaleTimeString("en-GB");
+                csvContent += `"${row.studentName}","${row.grade}","${dStr}","${tStr}","${row.status}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const today = new Date().toISOString().slice(0, 10);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `سجل_انصراف_طالبات_${today}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        function distanceBetween(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = ((lat2 - lat1) * Math.PI) / 180;
+            const dLon = ((lon2 - lon1) * Math.PI) / 180;
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+    </script>
+</body>
+
+</html>

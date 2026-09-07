@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقارير - نظام انصراف الطالبات الذكي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body>
+    <header class="main-header">
+        <h1>تقارير الانصراف</h1>
+    </header>
+
+    <main class="dashboard">
+        <section>
+            <label for="reportType"><strong>اختر نوع التقرير:</strong></label>
+            <select id="reportType">
+                <option value="daily">📅 يومي</option>
+                <option value="weekly">🗓️ أسبوعي</option>
+                <option value="monthly">📈 شهري</option>
+            </select>
+            <button class="main-btn" onclick="generateReport()">إنشاء تقرير</button>
+        </section>
+
+        <section id="reportArea" style="margin-top:20px;">
+            <table border="1" width="100%" cellpadding="10">
+                <thead style="background-color:#3A5DAE; color:#fff;">
+                    <tr>
+                        <th>اسم الطالبة</th>
+                        <th>الصف</th>
+                        <th>وليّ الأمر</th>
+                        <th>رقم ولي الأمر</th>
+                        <th>الوقت</th>
+                        <th>التاريخ</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody id="reportBody"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>© 2026 مدرسة أم معبد الخزاعية للبنات</p>
+    </footer>
+
+    <script src="../assets/js/supervisor.js"></script>
+</body>
+
+</html>

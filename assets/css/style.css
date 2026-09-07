@@ -1,0 +1,80 @@
+body {
+    font-family: 'Tajawal', sans-serif;
+    direction: rtl;
+    background-color: #FFFFFF;
+    color: #222;
+    margin: 0;
+    padding: 0;
+}
+
+.main-header {
+    background-color: #3A5DAE;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+
+.logo {
+    width: 90px;
+    display: block;
+    margin: 0 auto 10px;
+}
+
+.main-btn {
+    background-color: #F5B700;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-block;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.home-content {
+    text-align: center;
+    padding: 30px;
+}
+
+.features ul {
+    list-style: none;
+    padding: 0;
+}
+
+.features li {
+    margin: 8px 0;
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 70vh;
+}
+
+.login-card {
+    background-color: #f8f9ff;
+    border: 2px solid #3A5DAE;
+    border-radius: 12px;
+    padding: 30px;
+    width: 300px;
+    text-align: right;
+}
+
+input {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.footer {
+    background-color: #3A5DAE;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+}
